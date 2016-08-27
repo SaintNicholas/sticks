@@ -1,0 +1,7 @@
+[package]
+name = "projection"
+version = "0.1.0"
+authors = ["nick"]
+
+[dependencies]
+num = "0.1"
