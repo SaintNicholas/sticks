@@ -1,5 +1,9 @@
+#[macro_use]
+extern crate nom;
+
 mod vector;
 mod matrix;
+mod parsing;
 
 use vector::*;
 use matrix::*;
