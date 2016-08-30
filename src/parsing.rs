@@ -1,4 +1,8 @@
-use nom::{IResult, space, alphanumeric, multispace, be_f64, le_f64, digit};
+/*
+    Do I need to allow comments after parsed lines? 'Ka 2.0 2.0 2.0 # Description'
+*/
+
+use nom::{IResult, space, alphanumeric, multispace, digit, eof, not_line_ending};
 
 use std::str;
 use std::str::FromStr;
@@ -22,6 +26,7 @@ pub struct Color {
     b: f64
 }
 
+#[derive(Debug)]
 pub enum Illumination {
   ColorOnAmbientOff,
   ColorOnAmbientOn,
@@ -36,6 +41,7 @@ pub enum Illumination {
   CastsShadowsOntoInvisibleSurfaces,
 }
 
+#[derive(Debug)]
 enum Value {
     Name(String),
     ColorAmbient(Color),
@@ -48,51 +54,121 @@ enum Value {
     OpticalDensity(f64),
 }
 
-named!(parse_name<String>,
+named!(material_values<Vec<Value> >,
+    many0!(
+        chain!(
+            many0!(ignored_line) ~
+            value: alt!(
+                name_value |
+                color_ambient_value |
+                color_diffuse_value |
+                color_specular_value |
+                color_transmission_value
+            ) ~
+            many0!(ignored_line),
+
+            ||{value}
+        )
+    )
+);
+
+named!(name_value<Value>,
     chain!(
+        name: name,
+
+        ||{Value::Name(name)}
+    )
+);
+
+named!(name<String>,
+    chain!(
+        many0!(space) ~
         tag!("newmtl") ~
         many0!(space) ~
         name: map_res!(alphanumeric, str::from_utf8) ~
-        many0!(multispace),
+        ignored_line,
 
         ||{name.to_string()}
     )
 );
 
-// named!(parse_color_ambient<Color>,
-//     chain!(
-//         tag!("Ka") ~
-//         many0!(space) ~
-//         red: le_f64 ~
-//         many0!(space) ~
-//         green: opt!(le_f64) ~
-//         many0!(space) ~
-//         blue: opt!(le_f64) ~
-//         many0!(multispace),
+named!(color_ambient_value<Value>,
+    chain!(
+        color: color_ambient,
 
-//         ||{
-//               let actual_green: f64 = match green {
-//                 Some(i) => i,
-//                 None => red
-//               };
-//               let actual_blue: f64 = match blue {
-//                 Some(i) => i,
-//                 None => red
-//               };
-//               Color{r: red, g: actual_green, b: actual_blue}}
-//     )
-// );
+        ||{Value::ColorAmbient(color)}
+    )
+);
 
-named!(parse_color_ambient<Color>,
+named!(color_ambient<Color>,
     chain!(
         tag!("Ka") ~
+        color: color,
+
+        ||{color}
+    )
+);
+
+named!(color_diffuse_value<Value>,
+    chain!(
+        color: color_diffuse,
+
+        ||{Value::ColorDiffuse(color)}
+    )
+);
+
+named!(color_diffuse<Color>,
+    chain!(
+        tag!("Kd") ~
+        color: color,
+
+        ||{color}
+    )
+);
+
+named!(color_specular_value<Value>,
+    chain!(
+        color: color_specular,
+
+        ||{Value::ColorSpecular(color)}
+    )
+);
+
+named!(color_specular<Color>,
+    chain!(
+        tag!("Ks") ~
+        color: color,
+
+        ||{color}
+    )
+);
+
+named!(color_transmission_value<Value>,
+    chain!(
+        color: color_transmission,
+
+        ||{Value::ColorTransmission(color)}
+    )
+);
+
+named!(color_transmission<Color>,
+    chain!(
+        tag!("Ts") ~
+        color: color,
+
+        ||{color}
+    )
+);
+
+named!(color<Color>,
+    chain!(
         many0!(space) ~
         red: float64 ~
         many0!(space) ~
         green: opt!(float64) ~
         many0!(space) ~
         blue: opt!(float64) ~
-        many0!(multispace),
+        ignored_line,
 
         ||{
               let actual_green: f64 = match green {
@@ -121,6 +197,38 @@ named!(float64<f64>,
                // str::FromStr::from_str(float_string).unwrap()}
                f64::from_str(&float_string[..]).unwrap()}
     )
+);
+
+named!(ignored_line,
+    chain!(
+        alt!(blank_line | comment),
+
+        || { &b""[..] }
+    )
+);
+
+named!(blank_line,
+    chain!(
+        many0!(space) ~
+        alt!(eof | eol),
+        
+        || { &b""[..] }
+    )
+);
+
+named!(comment,
+    chain!(
+        many0!(space) ~
+        tag!("#") ~
+        not_line_ending ~
+        alt!(eof | eol),
+        
+        || { &b""[..] }
+    )
+);
+
+named!(eol,
+    alt!(tag!("\n") | tag!("\r\n") | tag!("\u{2028}") | tag!("\u{2029}"))
 );
 
 // named!(float64<f64>,
@@ -190,6 +298,27 @@ named!(float64<f64>,
 
 
 
+
+#[test]
+fn test_parse4() {
+
+    let test_case = &b" # TEst
+
+newmtl material1
+Ka 1.1 2.2 3.3 # haha
+# oh oh oh
+
+
+# hehehe
+Ka 2.2 3.3 4.4
+
+
+"[..];
+
+    println!("{:?}", material_values(test_case));
+    panic!();
+}
+
 #[test]
 fn test_parse3() {
 
@@ -200,20 +329,20 @@ panic!();
 }
 
 #[test]
-fn test_parse1() {
+fn test_parse2() {
 
   let test_case = &b"Ka 0.123 13.244 1.0"[..];
 
-println!("{:?}", parse_color_ambient(test_case));
+println!("{:?}", color_ambient_value(test_case));
 panic!();
 }
 
 #[test]
-fn test_parse2() {
+fn test_parse1() {
 
   let test_case = &b"newmtl Material"[..];
 
-println!("{:?}", parse_name(test_case));
+println!("{:?}", name_value(test_case));
 panic!();
 
 // let test_case =
