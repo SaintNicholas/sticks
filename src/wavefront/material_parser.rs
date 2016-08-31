@@ -2,40 +2,8 @@ use nom::{IResult, space, alphanumeric, multispace, digit, eof, not_line_ending}
 
 use std::str;
 use std::str::FromStr;
-
-pub struct Material {
-    pub name: String,                       // newmtl
-    pub color_ambient: Color,               // Ka
-    pub color_diffuse: Color,               // Kd
-    pub color_specular: Color,              // Ks
-    pub color_transmission: Option<Color>,  // Tf
-    pub illumination: Option<Illumination>, // illum
-    pub alpha: Option<f64>,                 // d
-    pub specular_coefficient: Option<f64>,  // Ns
-    pub optical_density: Option<f64>,       // Ni
-}
-
-#[derive(Debug)]
-pub struct Color {
-    r: f64,
-    g: f64,
-    b: f64
-}
-
-#[derive(Debug)]
-pub enum Illumination {
-  ColorOnAmbientOff,
-  ColorOnAmbientOn,
-  HighlightOn,
-  ReflectionOnAndRayTraceOn,
-  TransparencyGlassOnReflectionRayTraceOn,
-  ReflectionFresnelOnAndRayTraceOn,
-  TransparencyRefractionOnReflectionFresnelOffAndRayTraceOn,
-  TransparencyRefractionOnReflectionFresnelOnAndRayTraceOn,
-  TeflectionOnAndRayTraceOff,
-  TransparencyGlassOnReflectionRayTraceOff,
-  CastsShadowsOntoInvisibleSurfaces,
-}
+use super::{Material, Color, Illumination};
+use nom::IResult::*;
 
 #[derive(Debug)]
 enum Value {
@@ -48,6 +16,19 @@ enum Value {
     Alpha(f64),
     SpecularCoefficient(f64),
     OpticalDensity(f64),
+}
+
+pub fn parse_materials(string: &str) -> Result<Vec<Material>, String> {
+    if let Done(_, parsed) = material_values(string.as_bytes()) {
+        Ok(construct_material_structs(parsed))
+    } else {
+        Err(format!("Parser Error: {}", string))
+    }
+}
+
+fn construct_material_structs(values: Vec<Value>) -> Vec<Material> {
+  let mut materials: Vec<Material> = Vec::new();
+  materials
 }
 
 named!(material_values<Vec<Value> >,

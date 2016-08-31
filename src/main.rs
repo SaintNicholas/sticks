@@ -1,12 +1,11 @@
 #[macro_use]
 extern crate nom;
 
-mod vector;
-mod matrix;
-mod parsing;
+mod geometry;
+mod wavefront;
 
-use vector::*;
-use matrix::*;
+use geometry::matrix::*;
+use geometry::vector::*;
 
 fn computePixelCoordinates (
     pWorld: &Vec3<f64>,

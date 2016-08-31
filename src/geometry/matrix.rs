@@ -2,7 +2,8 @@ extern crate num;
 use std::ops::{Mul};
 use std::mem;
 use std::ops::{Index, IndexMut};
-use vector::*;
+
+use geometry::vector::*;
 
 #[derive(Debug, Clone)]
 pub struct Matrix44<T: num::Float> {

@@ -1,6 +1,8 @@
 extern crate num;
 use std::ops::{Add, Sub};
 
+use geometry::matrix::*;
+
 #[derive(Debug, Clone)]
 pub struct Vec3<T: num::Float> {
     pub x: T,
