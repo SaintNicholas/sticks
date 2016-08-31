@@ -1,7 +1,3 @@
-/*
-    Do I need to allow comments after parsed lines? 'Ka 2.0 2.0 2.0 # Description'
-*/
-
 use nom::{IResult, space, alphanumeric, multispace, digit, eof, not_line_ending};
 
 use std::str;
@@ -63,7 +59,11 @@ named!(material_values<Vec<Value> >,
                 color_ambient_value |
                 color_diffuse_value |
                 color_specular_value |
-                color_transmission_value
+                color_transmission_value |
+                illum_value |
+                alpha_value |
+                specular_coefficient_value |
+                optical_density_value
             ) ~
             many0!(ignored_line),
 
@@ -102,8 +102,10 @@ named!(color_ambient_value<Value>,
 
 named!(color_ambient<Color>,
     chain!(
+        many0!(space) ~
         tag!("Ka") ~
-        color: color,
+        color: color ~
+        ignored_line,
 
         ||{color}
     )
@@ -119,8 +121,10 @@ named!(color_diffuse_value<Value>,
 
 named!(color_diffuse<Color>,
     chain!(
+        many0!(space) ~
         tag!("Kd") ~
-        color: color,
+        color: color ~
+        ignored_line,
 
         ||{color}
     )
@@ -136,8 +140,10 @@ named!(color_specular_value<Value>,
 
 named!(color_specular<Color>,
     chain!(
+        many0!(space) ~
         tag!("Ks") ~
-        color: color,
+        color: color ~
+        ignored_line,
 
         ||{color}
     )
@@ -153,8 +159,10 @@ named!(color_transmission_value<Value>,
 
 named!(color_transmission<Color>,
     chain!(
+        many0!(space) ~
         tag!("Ts") ~
-        color: color,
+        color: color ~
+        ignored_line,
 
         ||{color}
     )
@@ -163,12 +171,11 @@ named!(color_transmission<Color>,
 named!(color<Color>,
     chain!(
         many0!(space) ~
-        red: float64 ~
+        red: f64 ~
         many0!(space) ~
-        green: opt!(float64) ~
+        green: opt!(f64) ~
         many0!(space) ~
-        blue: opt!(float64) ~
-        ignored_line,
+        blue: opt!(f64),
 
         ||{
               let actual_green: f64 = match green {
@@ -183,7 +190,105 @@ named!(color<Color>,
     )
 );
 
-named!(float64<f64>,
+named!(illum_value<Value>,
+    chain!(
+        illum: illum,
+
+        ||{
+              let illum_type: Illumination = match illum {
+                  0 => Illumination::ColorOnAmbientOff,
+                  1 => Illumination::ColorOnAmbientOn,
+                  2 => Illumination::HighlightOn,
+                  3 => Illumination::ReflectionOnAndRayTraceOn,
+                  4 => Illumination::TransparencyGlassOnReflectionRayTraceOn,
+                  5 => Illumination::ReflectionFresnelOnAndRayTraceOn,
+                  6 => Illumination::TransparencyRefractionOnReflectionFresnelOffAndRayTraceOn,
+                  7 => Illumination::TransparencyRefractionOnReflectionFresnelOnAndRayTraceOn,
+                  8 => Illumination::TeflectionOnAndRayTraceOff,
+                  9 => Illumination::TransparencyGlassOnReflectionRayTraceOff,
+                  10 => Illumination::CastsShadowsOntoInvisibleSurfaces,
+                  _ => panic!("Invalid illum")
+              };
+              Value::Illum(illum_type)}
+    )
+);
+
+named!(illum<usize>,
+    chain!(
+        many0!(space) ~
+        tag!("illum") ~
+        many0!(space) ~
+        illum: usize ~
+        ignored_line,
+
+        ||{illum}
+    )
+);
+
+named!(alpha_value<Value>,
+    chain!(
+        alpha: alpha,
+
+        ||{Value::Alpha(alpha)}
+    )
+);
+
+named!(alpha<f64>,
+    chain!(
+        many0!(space) ~
+        tag!("d") ~
+        many0!(space) ~
+        alpha: f64 ~
+        many0!(space) ~
+        ignored_line,
+
+        ||{alpha}
+    )
+);
+
+named!(specular_coefficient_value<Value>,
+    chain!(
+        specular_coefficient: specular_coefficient,
+
+        ||{Value::SpecularCoefficient(specular_coefficient)}
+    )
+);
+
+named!(specular_coefficient<f64>,
+    chain!(
+        many0!(space) ~
+        tag!("Ns") ~
+        many0!(space) ~
+        alpha: f64 ~
+        many0!(space) ~
+        ignored_line,
+
+        ||{alpha}
+    )
+);
+
+named!(optical_density_value<Value>,
+    chain!(
+        optical_density: optical_density,
+
+        ||{Value::SpecularCoefficient(optical_density)}
+    )
+);
+
+named!(optical_density<f64>,
+    chain!(
+        many0!(space) ~
+        tag!("Ni") ~
+        many0!(space) ~
+        alpha: f64 ~
+        many0!(space) ~
+        ignored_line,
+
+        ||{alpha}
+    )
+);
+
+named!(f64<f64>,
     chain!(
         a: map_res!(digit, str::from_utf8) ~
         b: opt!(tag!(".")) ~
@@ -194,8 +299,16 @@ named!(float64<f64>,
                if let Some(i) = c {
                   float_string = float_string + "." + &i;
                }
-               // str::FromStr::from_str(float_string).unwrap()}
                f64::from_str(&float_string[..]).unwrap()}
+    )
+);
+
+named!(usize<usize>,
+    chain!(
+    a: map_res!(digit, str::from_utf8),
+    ||{
+           let mut usize_string: String = a.to_string();
+           usize::from_str(&usize_string[..]).unwrap()}
     )
 );
 
@@ -231,15 +344,15 @@ named!(eol,
     alt!(tag!("\n") | tag!("\r\n") | tag!("\u{2028}") | tag!("\u{2029}"))
 );
 
-// named!(float64<f64>,
+// named!(f64<f64>,
 //     chain!(
-//         f: float64str,
+//         f: f64str,
 
 //         ||{str::FromStr::from_str(f).unwrap()}
 //     )
 // );
 
-// named!(float64str<&str>,
+// named!(f64str<&str>,
 //     many1!(alt!(digit | char!('.')))
 // );
 
@@ -324,7 +437,7 @@ fn test_parse3() {
 
   let test_case = &b"1.0"[..];
 
-println!("{:?}", float64(test_case));
+println!("{:?}", f64(test_case));
 panic!();
 }
 
