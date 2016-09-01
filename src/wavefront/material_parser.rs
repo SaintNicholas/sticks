@@ -3,7 +3,9 @@ use nom::{IResult, space, alphanumeric, multispace, digit, eof, not_line_ending}
 use std::str;
 use std::str::FromStr;
 use nom::IResult::*;
+use std::collections::HashSet;
 
+/* Can I remove the String and make this Copy? */
 #[derive(Debug)]
 pub struct Material {
     pub name: String,                       // newmtl
@@ -33,7 +35,7 @@ impl Default for Material {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Color {
     r: f64,
     g: f64,
@@ -46,7 +48,7 @@ impl Default for Color {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Illumination {
   ColorOnAmbientOff,
   ColorOnAmbientOn,
@@ -100,12 +102,111 @@ fn construct_material_structs(values: Vec<Value>) -> Result<Vec<Material>, Strin
 
 fn construct_material_struct(values: &[Value]) -> Result<Material, String> {
     let mut material: Material = Default::default();
-    for value in values {
+    let mut found_name = false;
+    let mut found_ambient = false;
+    let mut found_diffuse = false;
+    let mut found_specular = false;
+    let mut error_strings = HashSet::new();
+
+    'parsing_values: for value in values {
         match value {
-            _ => println!("Found one")
+            &Value::Name(ref name) => {
+                if false == found_name {
+                    found_name = true;
+                    material.name = name.clone();
+                } else {
+                    error_strings.insert("Duplicate names found while constructing Material.".to_string());
+                    break 'parsing_values;
+                }
+            },
+            &Value::ColorAmbient(ref color) => {
+                if false == found_name {
+                    found_ambient = true;
+                    material.color_ambient = *color;
+                } else {
+                    error_strings.insert("Duplicate ambient colors found while constructing Material.".to_string());
+                    break 'parsing_values;
+                }
+            },
+            &Value::ColorDiffuse(ref color) => {
+                if false == found_name {
+                    found_diffuse = true;
+                    material.color_diffuse = *color;
+                } else {
+                    error_strings.insert("Duplicate diffuse colors found while constructing Material.".to_string());
+                    break 'parsing_values;
+                }
+            },
+            &Value::ColorSpecular(ref color) => {
+                if false == found_name {
+                    found_specular = true;
+                    material.color_specular = *color;
+                } else {
+                    error_strings.insert("Duplicate specular colors found while constructing Material.".to_string());
+                    break 'parsing_values;
+                }
+            },
+            &Value::ColorTransmission(ref color) => {
+                if let Some(_) = material.color_transmission {
+                    error_strings.insert("Duplicate transmission colors found while constructing Material.".to_string());
+                    break 'parsing_values;
+                } else {
+                    material.color_transmission = Some(*color);
+                }
+            },
+            &Value::Illum(ref illum) => {
+                if let Some(_) = material.illumination {
+                    error_strings.insert("Duplicate illumination found while constructing Material.".to_string());
+                    break 'parsing_values;
+                } else {
+                    material.illumination = Some(*illum);
+                }
+            },
+            &Value::Alpha(ref alpha) => {
+                if let Some(_) = material.alpha {
+                    error_strings.insert("Duplicate alpha found while constructing Material.".to_string());
+                    break 'parsing_values;
+                } else {
+                    material.alpha = Some(*alpha);
+                }
+            },
+            &Value::SpecularCoefficient(ref coefficient) => {
+                if let Some(_) = material.specular_coefficient {
+                    error_strings.insert("Duplicate specular coefficient found while constructing Material.".to_string());
+                    break 'parsing_values;
+                } else {
+                    material.specular_coefficient = Some(*coefficient);
+                }
+            },
+            &Value::OpticalDensity(ref density) => {
+                if let Some(_) = material.optical_density {
+                    error_strings.insert("Duplicate optical density found while constructing Material.".to_string());
+                    break 'parsing_values;
+                } else {
+                    material.optical_density = Some(*density);
+                }
+            },
         }
     }
-    return Err("Fail".to_string())
+
+    if false == found_name {
+        error_strings.insert("Name not found while constructing Material. It is a necessary field.".to_string());
+    }
+    if false == found_ambient {
+        error_strings.insert("Ambient color not found while constructing Material. It is a necessary field.".to_string());
+    }
+    if false == found_diffuse {
+        error_strings.insert("Diffuse color found while constructing Material. It is a necessary field.".to_string());
+    }
+    if false == found_specular {
+        error_strings.insert("Specular color not found while constructing Material. It is a necessary field.".to_string());
+    }
+
+    if error_strings.is_empty() {
+        Ok(material)
+    } else {
+        Err(error_strings.iter().fold(String::new(), |acc, ref x| acc + "\n" + x))
+    }
 }
 
 named!(material_values<Vec<Value> >,
