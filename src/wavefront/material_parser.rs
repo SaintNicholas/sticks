@@ -2,8 +2,64 @@ use nom::{IResult, space, alphanumeric, multispace, digit, eof, not_line_ending}
 
 use std::str;
 use std::str::FromStr;
-use super::{Material, Color, Illumination};
 use nom::IResult::*;
+
+#[derive(Debug)]
+pub struct Material {
+    pub name: String,                       // newmtl
+    pub color_ambient: Color,               // Ka
+    pub color_diffuse: Color,               // Kd
+    pub color_specular: Color,              // Ks
+    pub color_transmission: Option<Color>,  // Tf
+    pub illumination: Option<Illumination>, // illum
+    pub alpha: Option<f64>,                 // d
+    pub specular_coefficient: Option<f64>,  // Ns
+    pub optical_density: Option<f64>,       // Ni
+}
+
+impl Default for Material {
+    fn default() -> Material {
+        Material{
+            name: String::new(),
+            color_ambient: Default::default(),
+            color_diffuse: Default::default(),
+            color_specular: Default::default(),
+            color_transmission: None,
+            illumination: None,
+            alpha: None,
+            specular_coefficient: None,
+            optical_density: None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Color {
+    r: f64,
+    g: f64,
+    b: f64
+}
+
+impl Default for Color {
+    fn default() -> Color {
+        Color{r: 0.0, g: 0.0, b: 0.0}
+    }
+}
+
+#[derive(Debug)]
+pub enum Illumination {
+  ColorOnAmbientOff,
+  ColorOnAmbientOn,
+  HighlightOn,
+  ReflectionOnAndRayTraceOn,
+  TransparencyGlassOnReflectionRayTraceOn,
+  ReflectionFresnelOnAndRayTraceOn,
+  TransparencyRefractionOnReflectionFresnelOffAndRayTraceOn,
+  TransparencyRefractionOnReflectionFresnelOnAndRayTraceOn,
+  TeflectionOnAndRayTraceOff,
+  TransparencyGlassOnReflectionRayTraceOff,
+  CastsShadowsOntoInvisibleSurfaces,
+}
 
 #[derive(Debug)]
 enum Value {
@@ -20,15 +76,36 @@ enum Value {
 
 pub fn parse_materials(string: &str) -> Result<Vec<Material>, String> {
     if let Done(_, parsed) = material_values(string.as_bytes()) {
-        Ok(construct_material_structs(parsed))
+        construct_material_structs(parsed)
     } else {
         Err(format!("Parser Error: {}", string))
     }
 }
 
-fn construct_material_structs(values: Vec<Value>) -> Vec<Material> {
-  let mut materials: Vec<Material> = Vec::new();
-  materials
+fn construct_material_structs(values: Vec<Value>) -> Result<Vec<Material>, String> {
+    let mut materials: Vec<Material> = Vec::new();
+
+    let mut last_name_pos = 0;
+    for i in 0..values.len() + 1 {
+        if let Value::Name(_) = values[i] {
+            let material = construct_material_struct(&values[last_name_pos..i]);
+            last_name_pos = i
+        }
+    }
+
+    let material = construct_material_struct(&values[last_name_pos..values.len()+1]);
+
+    Ok(materials)
+}
+
+fn construct_material_struct(values: &[Value]) -> Result<Material, String> {
+    let mut material: Material = Default::default();
+    for value in values {
+        match value {
+            _ => println!("Found one")
+        }
+    }
+    return Err("Fail".to_string())
 }
 
 named!(material_values<Vec<Value> >,
