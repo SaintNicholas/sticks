@@ -265,11 +265,15 @@ named!(parse_name<String>,
         many0!(space) ~
         tag!("newmtl") ~
         many0!(space) ~
-        name: map_res!(alphanumeric, str::from_utf8) ~
+        name: map_res!(not_space, str::from_utf8) ~
         parse_ignored_line,
 
         ||{name.to_string()}
     )
+);
+
+named!(not_space,
+    is_not!(" \t\r\n")
 );
 
 named!(parse_color_ambient_value<Value>,
@@ -1058,15 +1062,18 @@ Ks 0.500000 0.500000 0.500000
 "[..];
         let test_case_2 = &b" newmtl materialname3 # Comment
 "[..];
-        let test_case_3 = &b" newmtl materialname3 after
+        let test_case_3 = &b" newmtl materialname3.001 # Comment
 "[..];
-        let test_case_4 = &b" before newmtl materialname3
+        let test_case_4 = &b" newmtl materialname3 after
+"[..];
+        let test_case_5 = &b" before newmtl materialname3
 "[..];
 
         assert_eq!(Done(&b""[..], Value::Name("materialname3".to_string())), parse_name_value(test_case_1));
         assert_eq!(Done(&b""[..], Value::Name("materialname3".to_string())), parse_name_value(test_case_2));
-        assert_nom_error!(parse_name_value(test_case_3));
+        assert_eq!(Done(&b""[..], Value::Name("materialname3.001".to_string())), parse_name_value(test_case_3));
         assert_nom_error!(parse_name_value(test_case_4));
+        assert_nom_error!(parse_name_value(test_case_5));
     }
 
     #[test]
