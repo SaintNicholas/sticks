@@ -1,10 +1,8 @@
-use nom::{space, alphanumeric, digit, eof, not_line_ending};
+use nom::{space, digit, eof, not_line_ending};
 
 use std::str;
 use std::str::FromStr;
-use std::collections::HashSet;
 use nom::IResult::*;
-use nom::Err::*;
 
 /* Can I remove the String and make this Copy? */
 #[derive(Debug, PartialEq)]
@@ -487,15 +485,6 @@ named!(parse_f64<f64>,
     )
 );
 
-named!(parse_usize<usize>,
-    chain!(
-    a: map_res!(digit, str::from_utf8),
-    ||{
-           let usize_string: String = a.to_string();
-           usize::from_str(&usize_string[..]).unwrap()}
-    )
-);
-
 named!(parse_ignored_line,
     chain!(
         alt!(parse_blank_line | parse_comment),
@@ -539,7 +528,6 @@ mod tests
                 parse_materials,
                 construct_material_structs,
                 construct_material_struct,
-                parse_material_values,
                 parse_name_value,
                 parse_color_ambient_value,
                 parse_color_diffuse_value,
@@ -889,7 +877,7 @@ Ks 0.500000 0.500000 0.500000
     }
 
     fn construct_material_struct_should_fail_if_no_values() {
-        let mut values: Vec<Value> = Vec::new();
+        let values: Vec<Value> = Vec::new();
 
         assert_eq!(Err("Name not found while constructing Material. It is a necessary field.\nAmbient color not found while constructing Material. It is a necessary field.\nDiffuse color not found while constructing Material. It is a necessary field.\nSpecular color not found while constructing Material. It is a necessary field.\n".to_string()), construct_material_struct(&values));
     }
