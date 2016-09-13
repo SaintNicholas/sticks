@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate nom;
+extern crate clap;
 
 mod geometry;
 mod wavefront;
 
 use geometry::matrix::*;
 use geometry::vector::*;
+use clap::{App, Arg, SubCommand};
+use std::collections::HashSet;
 
 fn computePixelCoordinates (
     pWorld: &Vec3<f64>,
@@ -37,6 +40,51 @@ fn computePixelCoordinates (
 }
 
 fn main() {
+    let matches = App::new("MyApp")
+        .version("0.0.1")
+        .author("KNick Goote <ngoote@gmail.com>")
+        .about("Does awesome things")
+        .arg(Arg::with_name("material")
+            .short("m")
+            .long("material")
+            .value_name("FILE")
+            .help("Sets a material file")
+            .takes_value(true)
+            .multiple(true))
+        .arg(Arg::with_name("object")
+            .short("j")
+            .long("object")
+            .value_name("FILE")
+            .help("Sets the object file")
+            .takes_value(true)
+            .required(true))
+        .arg(Arg::with_name("output")
+            .short("o`")
+            .long("output")
+            .value_name("FILE")
+            .help("Sets the output file")
+            .takes_value(true)
+            .required(true))
+        .get_matches();
+
+    if let Some(o) = matches.value_of("output") {
+        println!("Value for output: {:?}", o);
+    }
+
+    if let Some(j) = matches.value_of("object") {
+        println!("Value for object: {:?}", j);
+    }
+
+     let vals: Vec<&str> = matches.values_of("material").unwrap().collect();
+     println!("vals: {:?}", vals);
+
+
+
+
+
+
+
+
     let verts: [Vec3<f64>; 146] = [
         Vec3::new(0.0, 39.034, 0.0),
         Vec3::new(0.76212, 36.843, 0.0),
