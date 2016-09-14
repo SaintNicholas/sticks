@@ -1,8 +1,7 @@
 use nom::{space, digit, eof, not_line_ending};
-
-use std::str;
-use std::str::FromStr;
 use nom::IResult::*;
+use std::str;
+use wavefront::parser_utilities::{parse_f64, parse_ignored_line, parse_blank_line, parse_comment, parse_eol, not_space};
 
 /* Can I remove the String and make this Copy? */
 #[derive(Debug, PartialEq)]
@@ -270,10 +269,6 @@ named!(parse_name<String>,
     )
 );
 
-named!(not_space,
-    is_not!(" \t\r\n")
-);
-
 named!(parse_color_ambient_value<Value>,
     chain!(
         color: parse_color_ambient,
@@ -468,53 +463,6 @@ named!(parse_optical_density<f64>,
 
         ||{alpha}
     )
-);
-
-named!(parse_f64<f64>,
-    chain!(
-        a: map_res!(digit, str::from_utf8) ~
-        opt!(tag!(".")) ~
-        c: opt!(map_res!(digit, str::from_utf8)),
-
-        ||{
-               let mut float_string: String = a.to_string();
-               if let Some(i) = c {
-                  float_string = float_string + "." + &i;
-               }
-               f64::from_str(&float_string[..]).unwrap()}
-    )
-);
-
-named!(parse_ignored_line,
-    chain!(
-        alt!(parse_blank_line | parse_comment),
-
-        || { &b""[..] }
-    )
-);
-
-named!(parse_blank_line,
-    chain!(
-        many0!(space) ~
-        alt!(eof | parse_eol),
-        
-        || { &b""[..] }
-    )
-);
-
-named!(parse_comment,
-    chain!(
-        many0!(space) ~
-        tag!("#") ~
-        not_line_ending ~
-        alt!(eof | parse_eol),
-        
-        || { &b""[..] }
-    )
-);
-
-named!(parse_eol,
-    alt!(tag!("\n") | tag!("\r\n") | tag!("\u{2028}") | tag!("\u{2029}"))
 );
 
 #[cfg(test)]
@@ -1066,9 +1014,9 @@ Ks 0.500000 0.500000 0.500000
 
     #[test]
     fn parse_color_ambient_value_should_parse_properly() {
-        let test_case_1 = &b" Ka 1.1 2.2 3.3
+        let test_case_1 = &b" Ka 1.1 -2.2 3.3
 "[..];
-        let test_case_2 = &b" Ka 1.1
+        let test_case_2 = &b" Ka -1.1
 "[..];
         let test_case_3 = &b" Ka 4 3 2 # Comment
 "[..];
@@ -1077,8 +1025,8 @@ Ks 0.500000 0.500000 0.500000
         let test_case_5 = &b" before Ka 1.1 2.2 3.3
 "[..];
 
-        assert_eq!(Done(&b""[..], Value::ColorAmbient(Color{r: 1.1, g: 2.2, b: 3.3})), parse_color_ambient_value(test_case_1));
-        assert_eq!(Done(&b""[..], Value::ColorAmbient(Color{r: 1.1, g: 1.1, b: 1.1})), parse_color_ambient_value(test_case_2));
+        assert_eq!(Done(&b""[..], Value::ColorAmbient(Color{r: 1.1, g: -2.2, b: 3.3})), parse_color_ambient_value(test_case_1));
+        assert_eq!(Done(&b""[..], Value::ColorAmbient(Color{r: -1.1, g: -1.1, b: -1.1})), parse_color_ambient_value(test_case_2));
         assert_eq!(Done(&b""[..], Value::ColorAmbient(Color{r: 4.0, g: 3.0, b: 2.0})), parse_color_ambient_value(test_case_3));
         assert_nom_error!(parse_color_ambient_value(test_case_4));
         assert_nom_error!(parse_color_ambient_value(test_case_5));
