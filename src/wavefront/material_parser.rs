@@ -75,10 +75,19 @@ enum Value {
 }
 
 pub fn parse_materials(string: &str) -> Result<Vec<Material>, String> {
-    if let Done(_, parsed) = parse_material_values(string.as_bytes()) {
-        construct_material_structs(parsed)
+    let result = parse_material_values(string.as_bytes());
+    if let Done(remaining, parsed) = result {
+        if remaining == [] {
+            construct_material_structs(parsed)
+        } else {
+            Err(format!("Parser error: Failed parsing everything. Leftover: {:?}", remaining))
+        }
+    } else if let Error(error) = result {
+        Err(format!("Parser error: Error {:?}", error))
+    } else if let Incomplete(remaining) = result {
+        Err(format!("Parser error: Parsing incomplete."))
     } else {
-        Err(format!("Parser Error: {}", string))
+        unimplemented!()
     }
 }
 
@@ -469,6 +478,7 @@ named!(parse_optical_density<f64>,
 mod tests
 {
     use nom::IResult::*;
+    use nom::{Err};
     use super::{Material,
                 Color,
                 Illumination,
@@ -499,7 +509,10 @@ mod tests
     #[test]
     fn test_parse_materials_should_parse_properly() {
         test_parse_materials_should_parse_multi_material_mtl_file();
-        test_parse_materials_should_return_error_if_failed();
+        test_parse_materials_should_return_error_if_parsed_properly_but_material_incomplete();
+        test_parse_materials_should_return_error_if_parsing_returned_done_but_leftover_data();
+        test_parse_materials_should_return_error_if_parsing_returned_error();
+        test_parse_materials_should_return_error_if_parsing_returned_incomplete();
     }
 
     fn test_parse_materials_should_parse_multi_material_mtl_file() {
@@ -593,7 +606,7 @@ illum 3
         assert_eq!(Ok(expected_materials), parse_materials(mtl_file));
     }
 
-    fn test_parse_materials_should_return_error_if_failed() {
+    fn test_parse_materials_should_return_error_if_parsed_properly_but_material_incomplete() {
         let mtl_file = "
 # Blender MTL File: 'None'
 # Material Count: 2
@@ -608,6 +621,31 @@ Ks 0.500000 0.500000 0.500000
 ";
 
         assert_eq!(Err("Ambient color not found while constructing Material. It is a necessary field.\n".to_string()), parse_materials(mtl_file));
+    }
+
+    fn test_parse_materials_should_return_error_if_parsing_returned_done_but_leftover_data() {
+        let mtl_file = "
+# Blender MTL File: 'None'
+# Material Count: 2
+# name
+newmtl Material
+# ambient color (weighted)
+# Ka 0.000000 0.000000 0.000000
+# diffuse color (weighted)
+Kd 0.640000 0.640000 0.640000
+# dissolve factor (weighted)
+Ks 0.500000 0.500000 0.500000
+l
+";
+
+        let remaining = ['l' as u8, '\n' as u8];
+        assert_eq!(Err(format!("Parser error: Failed parsing everything. Leftover: {:?}", remaining)), parse_materials(mtl_file));
+    }
+
+    fn test_parse_materials_should_return_error_if_parsing_returned_error() {
+    }
+
+    fn test_parse_materials_should_return_error_if_parsing_returned_incomplete() {
     }
 
     #[test]
