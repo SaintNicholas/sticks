@@ -5,9 +5,9 @@ use std::str;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Vertex {
-    x: f64,
-    y: f64,
-    z: f64
+    pub x: f64,
+    pub y: f64,
+    pub z: f64
 }
 
 impl Default for Vertex {
@@ -18,16 +18,16 @@ impl Default for Vertex {
 
 #[derive(Debug, PartialEq)]
 pub struct Triangle {
-    v1: Vertex,
-    v2: Vertex,
-    v3: Vertex,
-    vt1: Option<Vertex>,
-    vt2: Option<Vertex>,
-    vt3: Option<Vertex>,
-    vn1: Option<Vertex>,
-    vn2: Option<Vertex>,
-    vn3: Option<Vertex>,
-    materialName: String,
+    pub v1: Vertex,
+    pub v2: Vertex,
+    pub v3: Vertex,
+    pub vt1: Option<Vertex>,
+    pub vt2: Option<Vertex>,
+    pub vt3: Option<Vertex>,
+    pub vn1: Option<Vertex>,
+    pub vn2: Option<Vertex>,
+    pub vn3: Option<Vertex>,
+    pub materialName: String,
 }
 
 impl Default for Triangle {
@@ -97,10 +97,10 @@ enum Value {
 
 #[derive(Debug, PartialEq)]
 pub struct Object {
-    triangles: Vec<Triangle>,
-    raw_vertices: Vec<Vertex>,
-    raw_vertices_texture: Vec<Vertex>,
-    raw_vertices_normals: Vec<Vertex>,
+    pub triangles: Vec<Triangle>,
+    pub raw_vertices: Vec<Vertex>,
+    pub raw_vertices_texture: Vec<Vertex>,
+    pub raw_vertices_normals: Vec<Vertex>,
 }
 
 impl Default for Object {
